@@ -3,8 +3,7 @@
 // Complexity: O(|V|^3)
 vector<int> Blossom(vector<vector<int>>& graph) {
   int n = graph.size(), timer = -1;
-  vector<int> mate(n, -1), label(n), parent(n),
-              orig(n), aux(n, -1), q;
+  vector<int> mate(n, -1), label(n), parent(n), orig(n), aux(n, -1), q;
   auto lca = [&](int x, int y) {
     for (timer++; ; swap(x, y)) {
       if (x == -1) continue;
