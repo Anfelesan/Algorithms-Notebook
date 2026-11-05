@@ -12,6 +12,6 @@ long long Binexp(long long a, long long b, int mod) {
 long long Binexp(long long a, long long b, int mod) {
   if (b == 0) return 1LL;
   if (b == 1) return a % mod;
-  long long res = Binexp(a, b / 2LL);
+  long long res = Binexp(a, b / 2LL, mod);
   return (((res * res) % mod) * (b & 1 ? a : 1)) % mod;
 }
