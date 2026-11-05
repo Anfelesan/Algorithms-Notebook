@@ -8,14 +8,9 @@ struct HopcroftKarp {
   }
   bool Bfs() {
     queue<int> que;
-    for (int u = 0; u < n; ++u) {
-      if (l_match[u] == -1) {
-        dist[u] = 0;
-        que.push(u);
-      } else {
-        dist[u] = INT_MAX;
-      }
-    }
+    for (int u = 0; u < n; ++u)
+      dist[u] = (l_match[u] == -1) ? (que.push(u), 0) : INT_MAX;
+ 
     bool ok = false;
     for (; !que.empty(); que.pop()) {
       int u = que.front();
@@ -41,20 +36,32 @@ struct HopcroftKarp {
     dist[u] = INT_MAX;
     return false;
   }
-  vector<pair<int, int>> GetMatching() {
-    while (Bfs()) {
-      for (int u = 0; u < n; ++u) {
+  vector<int> GetMatching() {
+    while (Bfs())
+      for (int u = 0; u < n; ++u)
         if (l_match[u] == -1) Dfs(u);
+    return l_match;
+  }
+  pair<vector<bool>, vector<bool>> GetMinimumVertexCover() {
+    GetMatching();
+    vector<bool> vl(n, false), vr(m, false);
+    queue<int> que;
+    for (int u = 0; u < n; ++u)
+      if (l_match[u] == -1) vl[u] = true, que.push(u);
+ 
+    while (!que.empty()) {
+      int u = que.front(); que.pop();
+      for (int v: g[u]) {
+        if (!vr[v]) {
+          vr[v] = true;
+          if (r_match[v] != -1 && !vl[r_match[v]])
+            vl[r_match[v]] = true, que.push(r_match[v]);
+        }
       }
     }
-    vector<pair<int,int>> matching;
-    for (int u = 0; u < n; ++u) {
-      if (l_match[u] > -1) {
-        matching.emplace_back(u, l_match[u]);
-      }
-    }
-    return matching;
+    for (int i = 0; i < n; ++i) vl[i] = !vl[i];
+    return { vl, vr };
   }
 };
 
-// Tested on: https://codeforces.com/contest/1721/submission/336469358
+// Tested on: https://codeforces.com/contest/1721/submission/397485554
