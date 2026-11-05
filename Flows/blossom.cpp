@@ -1,54 +1,104 @@
-// Blossom implementation from: https://codeforces.com/blog/entry/92339#comment-810242
-// Tested on: https://codeforces.com/contest/2127/submission/382843415
-// Complexity: O(|V|^3)
-vector<int> Blossom(vector<vector<int>>& graph) {
-  int n = graph.size(), timer = -1;
-  vector<int> mate(n, -1), label(n), parent(n), orig(n), aux(n, -1), q;
-  auto lca = [&](int x, int y) {
-    for (timer++; ; swap(x, y)) {
-      if (x == -1) continue;
-      if (aux[x] == timer) return x;
-      aux[x] = timer;
-      x = (mate[x] == -1 ? -1 : orig[parent[mate[x]]]);
+// Tested on: https://atcoder.jp/contests/abc482/submissions/80513055
+// Complexity: O(|V|^3): not sure
+
+// Jiangly's Blossom
+struct Graph {
+    int n;
+    std::vector<std::vector<int>> e;
+    Graph(int n) : n(n), e(n) {}
+    void addEdge(int u, int v) {
+        e[u].push_back(v);
+        e[v].push_back(u);
     }
-  };
-  auto blossom = [&](int v, int w, int a) {
-    while (orig[v] != a) {
-      parent[v] = w; w = mate[v];
-      if (label[w] == 1) label[w] = 0, q.push_back(w);
-      orig[v] = orig[w] = a; v = parent[w];
+    std::vector<int> findMatching() {
+        std::vector<int> match(n, -1), vis(n), link(n), f(n), dep(n);
+        // disjoint set union
+        auto find = [&](int u) {
+            while (f[u] != u)
+                u = f[u] = f[f[u]];
+            return u;
+        };
+        auto lca = [&](int u, int v) {
+            u = find(u);
+            v = find(v);
+            while (u != v) {
+                if (dep[u] < dep[v])
+                    std::swap(u, v);
+                u = find(link[match[u]]);
+            }
+            return u;
+        };
+        std::queue<int> que;
+        auto blossom = [&](int u, int v, int p) {
+            while (find(u) != p) {
+                link[u] = v;
+                v = match[u];
+                if (vis[v] == 0) {
+                    vis[v] = 1;
+                    que.push(v);
+                }
+                f[u] = f[v] = p;
+                u = link[v];
+            }
+        };
+        // find an augmenting path starting from u and augment (if exist)
+        auto augment = [&](int u) {
+            while (!que.empty())
+                que.pop();
+            std::iota(f.begin(), f.end(), 0);
+            // vis = 0 corresponds to inner vertices, vis = 1 corresponds to outer vertices
+            std::fill(vis.begin(), vis.end(), -1);
+            que.push(u);
+            vis[u] = 1;
+            dep[u] = 0;
+            while (!que.empty()){
+                int u = que.front();
+                que.pop();
+                for (auto v : e[u]) {
+                    if (vis[v] == -1) {
+                        vis[v] = 0;
+                        link[v] = u;
+                        dep[v] = dep[u] + 1;
+                        // found an augmenting path
+                        if (match[v] == -1) {
+                            for (int x = v, y = u, temp; y != -1; x = temp, y = x == -1 ? -1 : link[x]) {
+                                temp = match[y];
+                                match[x] = y;
+                                match[y] = x;
+                            }
+                            return;
+                        }
+                        vis[match[v]] = 1;
+                        dep[match[v]] = dep[u] + 2;
+                        que.push(match[v]);
+                    } else if (vis[v] == 1 && find(v) != find(u)) {
+                        // found a blossom
+                        int p = lca(u, v);
+                        blossom(u, v, p);
+                        blossom(v, u, p);
+                    }
+                }
+            }
+
+        };
+        // find a maximal matching greedily (decrease constant)
+        auto greedy = [&]() {
+            for (int u = 0; u < n; ++u) {
+                if (match[u] != -1)
+                    continue;
+                for (auto v : e[u]) {
+                    if (match[v] == -1) {
+                        match[u] = v;
+                        match[v] = u;
+                        break;
+                    }
+                }
+            }
+        };
+        greedy();
+        for (int u = 0; u < n; ++u)
+            if (match[u] == -1)
+                augment(u);
+        return match;
     }
-  };
-  auto augment = [&](int v) {
-    while (v != -1) {
-      int pv = parent[v], nv = mate[pv];
-      mate[v] = pv; mate[pv] = v; v = nv;
-    }
-  };
-  auto bfs = [&](int root) {
-    fill(label.begin(), label.end(), -1);
-    iota(orig.begin(), orig.end(), 0);
-    q.clear();
-    label[root] = 0; q.push_back(root);
-    for (int i = 0; i < (int)q.size(); ++i) {
-      int v = q[i];
-      for (auto x : graph[v]) {
-        if (label[x] == -1) {
-          label[x] = 1; parent[x] = v;
-          if (mate[x] == -1)
-            return augment(x), 1;
-          label[mate[x]] = 0; q.push_back(mate[x]);
-        } else if (label[x] == 0 && orig[v] != orig[x]) {
-          int a = lca(orig[v], orig[x]);
-          blossom(x, v, a); blossom(v, x, a);
-        }
-      }
-    }
-    return 0;
-  };
-  // Time halves if you start with (any) maximal matching.
-  for (int i = 0; i < n; i++)
-    if (mate[i] == -1)
-      bfs(i);
-  return mate;
-}
+};
